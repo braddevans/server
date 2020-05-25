@@ -1183,7 +1183,7 @@ bool AuctionBotSeller::Initialize()
     sLog.outString();
 
     sLog.outString("Loading npc vendor items for filter..");
-    if (QueryResult* result = WorldDatabase.Query("SELECT DISTINCT item FROM npc_vendor"))
+    if (QueryResult* result = WorldDatabase.Query("SELECT DISTINCT `item` FROM `npc_vendor`"))
     {
         BarGoLink bar(result->GetRowCount());
         do
@@ -1205,16 +1205,16 @@ bool AuctionBotSeller::Initialize()
 
     sLog.outString("Loading loot items for filter..");
     if (QueryResult* result = WorldDatabase.PQuery(
-                                  "SELECT item FROM creature_loot_template UNION "
-                                  "SELECT item FROM disenchant_loot_template UNION "
-                                  "SELECT item FROM fishing_loot_template UNION "
-                                  "SELECT item FROM gameobject_loot_template UNION "
-                                  "SELECT item FROM item_loot_template UNION "
-                                  "SELECT item FROM milling_loot_template UNION "
-                                  "SELECT item FROM pickpocketing_loot_template UNION "
-                                  "SELECT item FROM prospecting_loot_template UNION "
-                                  "SELECT item FROM skinning_loot_template UNION "
-                                  "SELECT item FROM spell_loot_template"))
+                                  "SELECT `item` FROM `creature_loot_template` UNION "
+                                  "SELECT `item` FROM `disenchant_loot_template` UNION "
+                                  "SELECT `item` FROM `fishing_loot_template` UNION "
+                                  "SELECT `item` FROM `gameobject_loot_template` UNION "
+                                  "SELECT `item` FROM `item_loot_template` UNION "
+                                  "SELECT `item` FROM `milling_loot_template` UNION "
+                                  "SELECT `item` FROM `pickpocketing_loot_template` UNION "
+                                  "SELECT `item` FROM `prospecting_loot_template` UNION "
+                                  "SELECT `item` FROM `skinning_loot_template` UNION "
+                                  "SELECT `item` FROM `spell_loot_template`"))
     {
         BarGoLink bar(result->GetRowCount());
         do
@@ -1869,11 +1869,19 @@ void AuctionBotSeller::SetPricesOfItem(AHB_Seller_Config& config, uint32& buyp, 
     double temp_buyp = buyp * stackcnt *
                        (itemQuality < MAX_AUCTION_QUALITY ? config.GetPriceRatioPerQuality(AuctionQuality(itemQuality)) : 1) ;
 
-    double randrange = temp_buyp * 0.4;
-    buyp = (urand(temp_buyp - randrange, temp_buyp + randrange) / 100) + 1;
+    double randrange = temp_buyp * 0.4;    
+
+    uint32 buypMin = (uint32)temp_buyp - (uint32)randrange;
+    uint32 buypMax = ((uint32)temp_buyp + (uint32)randrange) < temp_buyp ? ACE_Numeric_Limits<uint32>::max() : temp_buyp + randrange;
+    
+    buyp = (urand(buypMin, buypMax) / 100) + 1;
+    
     double urandrange = buyp * 40;
     double temp_bidp = buyp * 50;
-    bidp = (urand(temp_bidp - urandrange, temp_bidp + urandrange) / 100) + 1;
+    uint32 bidPmin = (uint32)temp_bidp - (uint32)urandrange;
+    uint32 bidPmax = ((uint32)temp_bidp + (uint32)urandrange) < temp_bidp ? ACE_Numeric_Limits<uint32>::max() : temp_bidp + urandrange;
+
+    bidp = (urand(bidPmin, bidPmax) / 100) + 1;
 }
 
 void AuctionBotSeller::SetItemsRatio(uint32 al, uint32 ho, uint32 ne)

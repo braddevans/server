@@ -1295,7 +1295,7 @@ void BattleGroundMgr::Update(uint32 diff)
             {
                 DistributeArenaPoints();
                 m_NextAutoDistributionTime = time_t(m_NextAutoDistributionTime + BATTLEGROUND_ARENA_POINT_DISTRIBUTION_DAY * sWorld.getConfig(CONFIG_UINT32_ARENA_AUTO_DISTRIBUTE_INTERVAL_DAYS));
-                CharacterDatabase.PExecute("UPDATE saved_variables SET NextArenaPointDistributionTime = '" UI64FMTD "'", uint64(m_NextAutoDistributionTime));
+                CharacterDatabase.PExecute("UPDATE `saved_variables` SET `NextArenaPointDistributionTime` = '" UI64FMTD "'", uint64(m_NextAutoDistributionTime));
             }
             m_AutoDistributionTimeChecker = 600000; // check 10 minutes
         }
@@ -1740,8 +1740,8 @@ void BattleGroundMgr::CreateInitialBattleGrounds()
 {
     uint32 count = 0;
 
-    //                                                0   1                 2                 3                4              5             6
-    QueryResult* result = WorldDatabase.Query("SELECT id, MinPlayersPerTeam,MaxPlayersPerTeam,AllianceStartLoc,AllianceStartO,HordeStartLoc,HordeStartO FROM battleground_template");
+    //                                                 0     1                   2                   3                  4                5               6
+    QueryResult* result = WorldDatabase.Query("SELECT `id`, `MinPlayersPerTeam`,`MaxPlayersPerTeam`,`AllianceStartLoc`,`AllianceStartO`,`HordeStartLoc`,`HordeStartO` FROM `battleground_template`");
 
     if (!result)
     {
@@ -1863,12 +1863,12 @@ void BattleGroundMgr::InitAutomaticArenaPointDistribution()
     if (sWorld.getConfig(CONFIG_BOOL_ARENA_AUTO_DISTRIBUTE_POINTS))
     {
         DEBUG_LOG("Initializing Automatic Arena Point Distribution");
-        QueryResult* result = CharacterDatabase.Query("SELECT NextArenaPointDistributionTime FROM saved_variables");
+        QueryResult* result = CharacterDatabase.Query("SELECT `NextArenaPointDistributionTime` FROM `saved_variables`");
         if (!result)
         {
             DEBUG_LOG("Battleground: Next arena point distribution time not found in SavedVariables, reseting it now.");
             m_NextAutoDistributionTime = time_t(sWorld.GetGameTime() + BATTLEGROUND_ARENA_POINT_DISTRIBUTION_DAY * sWorld.getConfig(CONFIG_UINT32_ARENA_AUTO_DISTRIBUTE_INTERVAL_DAYS));
-            CharacterDatabase.PExecute("INSERT INTO saved_variables (NextArenaPointDistributionTime) VALUES ('" UI64FMTD "')", uint64(m_NextAutoDistributionTime));
+            CharacterDatabase.PExecute("INSERT INTO `saved_variables` (`NextArenaPointDistributionTime`) VALUES ('" UI64FMTD "')", uint64(m_NextAutoDistributionTime));
         }
         else
         {
@@ -1902,7 +1902,7 @@ void BattleGroundMgr::DistributeArenaPoints()
     for (std::map<uint32, uint32>::iterator plr_itr = PlayerPoints.begin(); plr_itr != PlayerPoints.end(); ++plr_itr)
     {
         // update to database
-        CharacterDatabase.PExecute("UPDATE characters SET arenaPoints = arenaPoints + '%u' WHERE guid = '%u'", plr_itr->second, plr_itr->first);
+        CharacterDatabase.PExecute("UPDATE `characters` SET `arenaPoints` = `arenaPoints` + '%u' WHERE `guid` = '%u'", plr_itr->second, plr_itr->first);
         // add points if player is online
         if (Player* pl = sObjectMgr.GetPlayer(ObjectGuid(HIGHGUID_PLAYER, plr_itr->first)))
             pl->ModifyArenaPoints(plr_itr->second);
@@ -2177,7 +2177,7 @@ void BattleGroundMgr::LoadBattleMastersEntry()
 {
     mBattleMastersMap.clear();                              // need for reload case
 
-    QueryResult* result = WorldDatabase.Query("SELECT entry,bg_template FROM battlemaster_entry");
+    QueryResult* result = WorldDatabase.Query("SELECT `entry`,`bg_template` FROM `battlemaster_entry`");
 
     uint32 count = 0;
 
@@ -2263,36 +2263,36 @@ void BattleGroundMgr::LoadBattleEventIndexes()
 
     QueryResult* result =
         //                           0         1           2                3                4              5           6
-        WorldDatabase.Query("SELECT data.typ, data.guid1, data.ev1 AS ev1, data.ev2 AS ev2, data.map AS m, data.guid2, description.map, "
+        WorldDatabase.Query("SELECT `data`.`typ`, `data`.`guid1`, `data`.`ev1` AS `ev1`, `data`.`ev2` AS ev2, `data`.`map` AS m, `data`.`guid2`, `description`.`map`, "
                             //                              7                  8                   9
-                            "description.event1, description.event2, description.description "
+                            "`description`.`event1`, `description`.`event2`, `description`.`description` "
                             "FROM "
-                            "(SELECT '1' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
-                            "FROM gameobject_battleground AS a "
-                            "LEFT OUTER JOIN gameobject AS b ON a.guid = b.guid "
+                            "(SELECT '1' AS typ, `a`.`guid` AS `guid1`, `a`.`event1` AS ev1, `a`.`event2` AS ev2, `b`.`map` AS map, `b`.`guid` AS guid2 "
+                            "FROM `gameobject_battleground` AS a "
+                            "LEFT OUTER JOIN `gameobject` AS b ON `a`.`guid` = `b`.`guid` "
                             "UNION "
-                            "SELECT '2' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
-                            "FROM creature_battleground AS a "
-                            "LEFT OUTER JOIN creature AS b ON a.guid = b.guid "
+                            "SELECT '2' AS typ, `a`.`guid` AS guid1, `a`.`event1` AS ev1, `a`.`event2` AS ev2, `b`.`map` AS map, `b`.`guid` AS guid2 "
+                            "FROM `creature_battleground` AS a "
+                            "LEFT OUTER JOIN `creature` AS b ON `a`.`guid` = `b`.`guid` "
                             ") data "
-                            "RIGHT OUTER JOIN battleground_events AS description ON data.map = description.map "
-                            "AND data.ev1 = description.event1 AND data.ev2 = description.event2 "
+                            "RIGHT OUTER JOIN `battleground_events` AS `description` ON `data`.`map` = `description`.`map` "
+                            "AND `data`.`ev1` = `description`.`event1` AND `data`.`ev2` = `description`.`event2` "
                             // full outer join doesn't work in mysql :-/ so just UNION-select the same again and add a left outer join
                             "UNION "
-                            "SELECT data.typ, data.guid1, data.ev1, data.ev2, data.map, data.guid2, description.map, "
-                            "description.event1, description.event2, description.description "
+                            "SELECT `data`.`typ`, `data`.`guid1`, `data`.`ev1`, `data`.`ev2`, `data`.`map`, `data`.`guid2`, `description`.`map`, "
+                            "`description`.`event1`, `description`.`event2`, `description`.`description` "
                             "FROM "
-                            "(SELECT '1' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
-                            "FROM gameobject_battleground AS a "
-                            "LEFT OUTER JOIN gameobject AS b ON a.guid = b.guid "
+                            "(SELECT '1' AS typ, `a`.`guid` AS guid1, `a`.`event1` AS ev1, `a`.`event2` AS ev2, `b`.`map` AS map, `b`.`guid` AS guid2 "
+                            "FROM `gameobject_battleground` AS a "
+                            "LEFT OUTER JOIN `gameobject` AS b ON `a`.`guid` = `b`.`guid` "
                             "UNION "
-                            "SELECT '2' AS typ, a.guid AS guid1, a.event1 AS ev1, a.event2 AS ev2, b.map AS map, b.guid AS guid2 "
-                            "FROM creature_battleground AS a "
-                            "LEFT OUTER JOIN creature AS b ON a.guid = b.guid "
+                            "SELECT '2' AS typ, `a`.`guid` AS guid1, `a`.`event1` AS ev1, `a`.`event2` AS ev2, `b`.`map` AS map, `b`.`guid` AS guid2 "
+                            "FROM `creature_battleground` AS a "
+                            "LEFT OUTER JOIN `creature` AS b ON `a`.`guid` = `b`.`guid` "
                             ") data "
-                            "LEFT OUTER JOIN battleground_events AS description ON data.map = description.map "
-                            "AND data.ev1 = description.event1 AND data.ev2 = description.event2 "
-                            "ORDER BY m, ev1, ev2");
+                            "LEFT OUTER JOIN `battleground_events` AS `description` ON `data`.`map` = `description`.`map` "
+                            "AND `data`.`ev1` = `description`.`event1` AND `data`.`ev2` = `description`.`event2` "
+                            "ORDER BY `m`, `ev1`, `ev2`");
     if (!result)
     {
         BarGoLink bar(1);

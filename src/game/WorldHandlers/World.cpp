@@ -306,7 +306,7 @@ World::AddSession_(WorldSession* s)
 
         static SqlStatementID id;
 
-        SqlStatement stmt = LoginDatabase.CreateStatement(id, "UPDATE realmlist SET population = ? WHERE id = ?");
+        SqlStatement stmt = LoginDatabase.CreateStatement(id, "UPDATE `realmlist` SET `population` = ? WHERE `id` = ?");
         stmt.PExecute(popu, realmID);
 
         DETAIL_LOG("Server Population (%f).", popu);
@@ -640,7 +640,7 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_UINT32_INSTANCE_RESET_TIME_HOUR, "Instance.ResetTimeHour", 4);
     setConfig(CONFIG_UINT32_INSTANCE_UNLOAD_DELAY,    "Instance.UnloadDelay", 30 * MINUTE * IN_MILLISECONDS);
 
-    setConfigMinMax(CONFIG_UINT32_MAX_PRIMARY_TRADE_SKILL, "MaxPrimaryTradeSkill", 2, 0, 10);
+    setConfigMinMax(CONFIG_UINT32_MAX_PRIMARY_TRADE_SKILL, "MaxPrimaryTradeSkill", 2, 0, 11);
 
     setConfigMinMax(CONFIG_UINT32_TRADE_SKILL_GMIGNORE_MAX_PRIMARY_COUNT, "TradeSkill.GMIgnore.MaxPrimarySkillsCount", SEC_CONSOLE, SEC_PLAYER, SEC_CONSOLE);
     setConfigMinMax(CONFIG_UINT32_TRADE_SKILL_GMIGNORE_LEVEL, "TradeSkill.GMIgnore.Level", SEC_CONSOLE, SEC_PLAYER, SEC_CONSOLE);
@@ -662,6 +662,7 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_BOOL_GM_LOWER_SECURITY, "GM.LowerSecurity", false);
     setConfig(CONFIG_BOOL_GM_ALLOW_ACHIEVEMENT_GAINS, "GM.AllowAchievementGain", true);
     setConfig(CONFIG_UINT32_GM_INVISIBLE_AURA, "GM.InvisibleAura", 37800);
+    setConfig(CONFIG_UINT32_GM_MAX_SPEED_FACTOR, "GM.MaxSpeedFactor", 10);
 
     setConfig(CONFIG_UINT32_GROUP_VISIBILITY, "Visibility.GroupMode", 0);
 
@@ -1028,10 +1029,10 @@ void World::SetInitialWorldSettings()
     // not send custom type REALM_FFA_PVP to realm list
     uint32 server_type = IsFFAPvPRealm() ? uint32(REALM_TYPE_PVP) : getConfig(CONFIG_UINT32_GAME_TYPE);
     uint32 realm_zone = getConfig(CONFIG_UINT32_REALM_ZONE);
-    LoginDatabase.PExecute("UPDATE realmlist SET icon = %u, timezone = %u WHERE id = '%u'", server_type, realm_zone, realmID);
+    LoginDatabase.PExecute("UPDATE `realmlist` SET `icon` = %u, `timezone` = %u WHERE `id` = '%u'", server_type, realm_zone, realmID);
 
     ///- Remove the bones (they should not exist in DB though) and old corpses after a restart
-    CharacterDatabase.PExecute("DELETE FROM corpse WHERE corpse_type = '0' OR time < (UNIX_TIMESTAMP()-'%u')", 3 * DAY);
+    CharacterDatabase.PExecute("DELETE FROM `corpse` WHERE `corpse_type` = '0' OR `time` < (UNIX_TIMESTAMP()-'%u')", 3 * DAY);
 
     ///- Load the DBC files
     sLog.outString("Initialize DBC data stores...");
@@ -1448,7 +1449,7 @@ void World::SetInitialWorldSettings()
     sprintf(isoDate, "%04d-%02d-%02d %02d:%02d:%02d",
             local.tm_year + 1900, local.tm_mon + 1, local.tm_mday, local.tm_hour, local.tm_min, local.tm_sec);
 
-    LoginDatabase.PExecute("INSERT INTO uptime (realmid, starttime, startstring, uptime) VALUES('%u', " UI64FMTD ", '%s', 0)",
+    LoginDatabase.PExecute("INSERT INTO `uptime` (`realmid`, `starttime`, `startstring`, `uptime`) VALUES('%u', " UI64FMTD ", '%s', 0)",
                            realmID, uint64(m_startTime), isoDate);
 
     m_timers[WUPDATE_AUCTIONS].SetInterval(MINUTE * IN_MILLISECONDS);
@@ -1520,7 +1521,7 @@ void World::SetInitialWorldSettings()
     sLog.outString();
 
     sLog.outString("Deleting expired bans...");
-    LoginDatabase.Execute("DELETE FROM ip_banned WHERE unbandate<=UNIX_TIMESTAMP() AND unbandate<>bandate");
+    LoginDatabase.Execute("DELETE FROM `ip_banned` WHERE `unbandate`<=UNIX_TIMESTAMP() AND `unbandate`<>`bandate`");
     sLog.outString();
 
     sLog.outString("Calculate next daily quest and dungeon reset time...");
@@ -1799,7 +1800,7 @@ void World::Update(uint32 diff)
         uint32 maxClientsNum = GetMaxActiveSessionCount();
 
         m_timers[WUPDATE_UPTIME].Reset();
-        LoginDatabase.PExecute("UPDATE uptime SET uptime = %u, maxplayers = %u WHERE realmid = %u AND starttime = " UI64FMTD, tmpDiff, maxClientsNum, realmID, uint64(m_startTime));
+        LoginDatabase.PExecute("UPDATE `uptime` SET `uptime` = %u, `maxplayers` = %u WHERE `realmid` = %u AND `starttime` = " UI64FMTD, tmpDiff, maxClientsNum, realmID, uint64(m_startTime));
     }
 
     /// <li> Handle all other objects
@@ -2043,16 +2044,16 @@ BanReturn World::BanAccount(BanMode mode, std::string nameOrIP, uint32 duration_
     {
         case BAN_IP:
             // No SQL injection as strings are escaped
-            resultAccounts = LoginDatabase.PQuery("SELECT id FROM account WHERE last_ip = '%s'", nameOrIP.c_str());
-            LoginDatabase.PExecute("INSERT INTO ip_banned VALUES ('%s',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()+%u,'%s','%s')", nameOrIP.c_str(), duration_secs, safe_author.c_str(), reason.c_str());
+            resultAccounts = LoginDatabase.PQuery("SELECT `id` FROM `account` WHERE `last_ip` = '%s'", nameOrIP.c_str());
+            LoginDatabase.PExecute("INSERT INTO `ip_banned` VALUES ('%s',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()+%u,'%s','%s')", nameOrIP.c_str(), duration_secs, safe_author.c_str(), reason.c_str());
             break;
         case BAN_ACCOUNT:
             // No SQL injection as string is escaped
-            resultAccounts = LoginDatabase.PQuery("SELECT id FROM account WHERE username = '%s'", nameOrIP.c_str());
+            resultAccounts = LoginDatabase.PQuery("SELECT `id` FROM `account` WHERE `username` = '%s'", nameOrIP.c_str());
             break;
         case BAN_CHARACTER:
             // No SQL injection as string is escaped
-            resultAccounts = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name = '%s'", nameOrIP.c_str());
+            resultAccounts = CharacterDatabase.PQuery("SELECT `account` FROM `characters` WHERE `name` = '%s'", nameOrIP.c_str());
             break;
         default:
             return BAN_SYNTAX_ERROR;
@@ -2079,7 +2080,7 @@ BanReturn World::BanAccount(BanMode mode, std::string nameOrIP, uint32 duration_
         if (mode != BAN_IP)
         {
             // No SQL injection as strings are escaped
-            LoginDatabase.PExecute("INSERT INTO account_banned VALUES ('%u', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()+%u, '%s', '%s', '1')",
+            LoginDatabase.PExecute("INSERT INTO `account_banned` VALUES ('%u', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()+%u, '%s', '%s', '1')",
                                    account, duration_secs, safe_author.c_str(), reason.c_str());
         }
 
@@ -2100,7 +2101,7 @@ bool World::RemoveBanAccount(BanMode mode, std::string nameOrIP)
     if (mode == BAN_IP)
     {
         LoginDatabase.escape_string(nameOrIP);
-        LoginDatabase.PExecute("DELETE FROM ip_banned WHERE ip = '%s'", nameOrIP.c_str());
+        LoginDatabase.PExecute("DELETE FROM `ip_banned` WHERE `ip` = '%s'", nameOrIP.c_str());
     }
     else
     {
@@ -2120,7 +2121,7 @@ bool World::RemoveBanAccount(BanMode mode, std::string nameOrIP)
         }
 
         // NO SQL injection as account is uint32
-        LoginDatabase.PExecute("UPDATE account_banned SET active = '0' WHERE id = '%u'", account);
+        LoginDatabase.PExecute("UPDATE `account_banned` SET `active` = '0' WHERE `id` = '%u'", account);
     }
     return true;
 }
@@ -2309,7 +2310,7 @@ void World::UpdateResultQueue()
 void World::UpdateRealmCharCount(uint32 accountId)
 {
     CharacterDatabase.AsyncPQuery(this, &World::_UpdateRealmCharCount, accountId,
-                                  "SELECT COUNT(guid) FROM characters WHERE account = '%u'", accountId);
+                                  "SELECT COUNT(`guid`) FROM `characters` WHERE `account` = '%u'", accountId);
 }
 
 void World::_UpdateRealmCharCount(QueryResult* resultCharCount, uint32 accountId)
@@ -2321,15 +2322,15 @@ void World::_UpdateRealmCharCount(QueryResult* resultCharCount, uint32 accountId
         delete resultCharCount;
 
         LoginDatabase.BeginTransaction();
-        LoginDatabase.PExecute("DELETE FROM realmcharacters WHERE acctid= '%u' AND realmid = '%u'", accountId, realmID);
-        LoginDatabase.PExecute("INSERT INTO realmcharacters (numchars, acctid, realmid) VALUES (%u, %u, %u)", charCount, accountId, realmID);
+        LoginDatabase.PExecute("DELETE FROM `realmcharacters` WHERE `acctid`= '%u' AND `realmid` = '%u'", accountId, realmID);
+        LoginDatabase.PExecute("INSERT INTO `realmcharacters` (`numchars`, `acctid`, `realmid`) VALUES (%u, %u, %u)", charCount, accountId, realmID);
         LoginDatabase.CommitTransaction();
     }
 }
 
 void World::InitWeeklyQuestResetTime()
 {
-    QueryResult* result = CharacterDatabase.Query("SELECT NextWeeklyQuestResetTime FROM saved_variables");
+    QueryResult* result = CharacterDatabase.Query("SELECT `NextWeeklyQuestResetTime` FROM `saved_variables`");
     if (!result)
         m_NextWeeklyQuestReset = time_t(time(NULL));        // game time not yet init
     else
@@ -2356,14 +2357,14 @@ void World::InitWeeklyQuestResetTime()
     m_NextWeeklyQuestReset = m_NextWeeklyQuestReset < curTime ? nextWeekResetTime - WEEK : nextWeekResetTime;
 
     if (!result)
-        CharacterDatabase.PExecute("INSERT INTO saved_variables (NextWeeklyQuestResetTime) VALUES ('" UI64FMTD "')", uint64(m_NextWeeklyQuestReset));
+        CharacterDatabase.PExecute("INSERT INTO `saved_variables` (`NextWeeklyQuestResetTime`) VALUES ('" UI64FMTD "')", uint64(m_NextWeeklyQuestReset));
     else
         delete result;
 }
 
 void World::InitDailyQuestResetTime()
 {
-    QueryResult* result = CharacterDatabase.Query("SELECT NextDailyQuestResetTime FROM saved_variables");
+    QueryResult* result = CharacterDatabase.Query("SELECT `NextDailyQuestResetTime` FROM `saved_variables`");
     if (!result)
         m_NextDailyQuestReset = time_t(time(NULL));         // game time not yet init
     else
@@ -2387,7 +2388,7 @@ void World::InitDailyQuestResetTime()
     m_NextDailyQuestReset = m_NextDailyQuestReset < curTime ? nextDayResetTime - DAY : nextDayResetTime;
 
     if (!result)
-        CharacterDatabase.PExecute("INSERT INTO saved_variables (NextDailyQuestResetTime) VALUES ('" UI64FMTD "')", uint64(m_NextDailyQuestReset));
+        CharacterDatabase.PExecute("INSERT INTO `saved_variables` (`NextDailyQuestResetTime`) VALUES ('" UI64FMTD "')", uint64(m_NextDailyQuestReset));
     else
         delete result;
 }
@@ -2396,7 +2397,7 @@ void World::SetMonthlyQuestResetTime(bool initialize)
 {
     if (initialize)
     {
-        QueryResult* result = CharacterDatabase.Query("SELECT NextMonthlyQuestResetTime FROM saved_variables");
+        QueryResult* result = CharacterDatabase.Query("SELECT `NextMonthlyQuestResetTime` FROM `saved_variables`");
 
         if (!result)
             m_NextMonthlyQuestReset = time_t(time(NULL));
@@ -2435,12 +2436,12 @@ void World::SetMonthlyQuestResetTime(bool initialize)
     m_NextMonthlyQuestReset = (initialize && m_NextMonthlyQuestReset < nextMonthResetTime) ? m_NextMonthlyQuestReset : nextMonthResetTime;
 
     // Row must exist for this to work. Currently row is added by InitDailyQuestResetTime(), called before this function
-    CharacterDatabase.PExecute("UPDATE saved_variables SET NextMonthlyQuestResetTime = '" UI64FMTD "'", uint64(m_NextMonthlyQuestReset));
+    CharacterDatabase.PExecute("UPDATE `saved_variables` SET `NextMonthlyQuestResetTime` = '" UI64FMTD "'", uint64(m_NextMonthlyQuestReset));
 }
 
 void World::InitRandomBGResetTime()
 {
-    QueryResult * result = CharacterDatabase.Query("SELECT NextRandomBGResetTime FROM saved_variables");
+    QueryResult * result = CharacterDatabase.Query("SELECT `NextRandomBGResetTime` FROM `saved_variables`");
     if (!result)
         m_NextRandomBGReset = time_t(time(NULL));         // game time not yet init
     else
@@ -2463,7 +2464,7 @@ void World::InitRandomBGResetTime()
     // normalize reset time
     m_NextRandomBGReset = m_NextRandomBGReset < curTime ? nextDayResetTime - DAY : nextDayResetTime;
     if (!result)
-        CharacterDatabase.PExecute("INSERT INTO saved_variables (NextRandomBGResetTime) VALUES ('" UI64FMTD "')", uint64(m_NextRandomBGReset));
+        CharacterDatabase.PExecute("INSERT INTO `saved_variables` (`NextRandomBGResetTime`) VALUES ('" UI64FMTD "')", uint64(m_NextRandomBGReset));
     else
         delete result;
 }
@@ -2471,37 +2472,37 @@ void World::InitRandomBGResetTime()
 void World::ResetDailyQuests()
 {
     DETAIL_LOG("Daily quests reset for all characters.");
-    CharacterDatabase.Execute("DELETE FROM character_queststatus_daily");
+    CharacterDatabase.Execute("DELETE FROM `character_queststatus_daily`");
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->ResetDailyQuestStatus();
 
     m_NextDailyQuestReset = time_t(m_NextDailyQuestReset + DAY);
-    CharacterDatabase.PExecute("UPDATE saved_variables SET NextDailyQuestResetTime = '" UI64FMTD "'", uint64(m_NextDailyQuestReset));
+    CharacterDatabase.PExecute("UPDATE `saved_variables` SET `NextDailyQuestResetTime` = '" UI64FMTD "'", uint64(m_NextDailyQuestReset));
 }
 
 void World::ResetRandomBG()
 {
     sLog.outDetail("Random BG status reset for all characters.");
-    CharacterDatabase.Execute("DELETE FROM character_battleground_random");
+    CharacterDatabase.Execute("DELETE FROM `character_battleground_random`");
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->SetRandomWinner(false);
 
     m_NextRandomBGReset = time_t(m_NextRandomBGReset + DAY);
-    CharacterDatabase.PExecute("UPDATE saved_variables SET NextRandomBGResetTime = '" UI64FMTD "'", uint64(m_NextRandomBGReset));
+    CharacterDatabase.PExecute("UPDATE `saved_variables` SET `NextRandomBGResetTime` = '" UI64FMTD "'", uint64(m_NextRandomBGReset));
 }
 
 void World::ResetWeeklyQuests()
 {
     DETAIL_LOG("Weekly quests reset for all characters.");
-    CharacterDatabase.Execute("DELETE FROM character_queststatus_weekly");
+    CharacterDatabase.Execute("DELETE FROM `character_queststatus_weekly`");
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->ResetWeeklyQuestStatus();
 
     m_NextWeeklyQuestReset = time_t(m_NextWeeklyQuestReset + WEEK);
-    CharacterDatabase.PExecute("UPDATE saved_variables SET NextWeeklyQuestResetTime = '" UI64FMTD "'", uint64(m_NextWeeklyQuestReset));
+    CharacterDatabase.PExecute("UPDATE `saved_variables` SET `NextWeeklyQuestResetTime` = '" UI64FMTD "'", uint64(m_NextWeeklyQuestReset));
 }
 
 void World::ResetMonthlyQuests()
@@ -2529,7 +2530,7 @@ void World::SetPlayerLimit(int32 limit, bool needUpdate)
     m_playerLimit = limit;
 
     if (db_update_need)
-        LoginDatabase.PExecute("UPDATE realmlist SET allowedSecurityLevel = '%u' WHERE id = '%u'",
+        LoginDatabase.PExecute("UPDATE `realmlist` SET `allowedSecurityLevel` = '%u' WHERE `id` = '%u'",
                                uint32(GetPlayerSecurityLimit()), realmID);
 }
 
@@ -2541,7 +2542,7 @@ void World::UpdateMaxSessionCounters()
 
 void World::LoadDBVersion()
 {
-    QueryResult* result = WorldDatabase.Query("SELECT version, structure, content FROM db_version ORDER BY version DESC, structure DESC, content DESC LIMIT 1");
+    QueryResult* result = WorldDatabase.Query("SELECT `version`, `structure`, `content` FROM `db_version` ORDER BY `version` DESC, `structure` DESC, `content` DESC LIMIT 1");
     if (result)
     {
         Field* fields = result->Fetch();
